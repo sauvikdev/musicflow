@@ -808,6 +808,27 @@
     border-bottom:1px solid rgba(243,231,199,0.15);
     flex-wrap:wrap;
   }
+  .drawer-left-group{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex:1;
+    min-width:260px;
+  }
+  .drawer-thumb-wrap{
+    width:68px;
+    height:68px;
+    border-radius:12px;
+    overflow:hidden;
+    flex-shrink:0;
+    border:2px solid var(--gold);
+    box-shadow:0 6px 16px rgba(0,0,0,0.35);
+  }
+  .drawer-thumb-img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
   .drawer-badge{
     display:inline-block;
     font-size:0.72rem;
@@ -1676,10 +1697,15 @@
       <!-- EXPANDED PLAYLIST TRACKLIST DRAWER -->
       <div class="playlist-drawer" id="playlistDrawer" style="display:block;">
         <div class="drawer-header">
-          <div class="drawer-info">
-            <span class="drawer-badge" id="drawerBadge">Old Classics</span>
-            <h3 id="drawerTitle">Old Favourites (Golden Era Classics)</h3>
-            <p id="drawerDesc">Timeless classic songs of Lata Mangeshkar, Kishore Kumar, Mohammed Rafi, Talat Mahmood, and evergreen melodies.</p>
+          <div class="drawer-left-group">
+            <div class="drawer-thumb-wrap">
+              <img id="drawerThumbImg" src="assets/playlist_old_classics.jpg" alt="Playlist Cover" class="drawer-thumb-img" />
+            </div>
+            <div class="drawer-info">
+              <span class="drawer-badge" id="drawerBadge">Old Classics</span>
+              <h3 id="drawerTitle">Old Favourites (Golden Era Classics)</h3>
+              <p id="drawerDesc">Timeless classic songs of Lata Mangeshkar, Kishore Kumar, Mohammed Rafi, Talat Mahmood, and evergreen melodies.</p>
+            </div>
           </div>
           <div class="drawer-actions">
             <button id="drawerPlayAllBtn" class="btn-play-all">▶ Play All</button>
@@ -1799,6 +1825,7 @@
     const PLAYLISTS = [
   {
     "id": "old-favourites",
+    "artwork": "assets/playlist_old_classics.jpg",
     "title": "Old Favourites",
     "bengaliTitle": "Golden Era Classics",
     "tag": "Nostalgia • 21 Tracks",
@@ -1958,6 +1985,7 @@
   },
   {
     "id": "bengali-spotlight",
+    "artwork": "assets/playlist_bengali_melody.jpg",
     "title": "Bengali Spotlight",
     "bengaliTitle": "বাংলা মেলোডি স্পটলাইট",
     "tag": "Bengali Melodies • 6 Tracks",
@@ -2012,6 +2040,7 @@
   },
   {
     "id": "fossils",
+    "artwork": "assets/playlist_fossils_rock.jpg",
     "title": "Fossils",
     "bengaliTitle": "ফসিলস - রূপম ইসলাম (বাংলা রক)",
     "tag": "Bengali Rock • 6 Tracks",
@@ -2066,6 +2095,7 @@
   },
   {
     "id": "fakira",
+    "artwork": "assets/playlist_fakira_folk.jpg",
     "title": "Fakira Playlist",
     "bengaliTitle": "ফকিরা - মাটির গান ও বাউল ফিউশন রক",
     "tag": "Folk Rock • 6 Tracks",
@@ -2120,6 +2150,7 @@
   },
   {
     "id": "bengali-hits-spotlight",
+    "artwork": "assets/playlist_bengali_hits.jpg",
     "title": "Bengali Hits Spotlight",
     "bengaliTitle": "Dev & Jeet Hits",
     "tag": "Commercial Hits • 6 Tracks",
@@ -2205,6 +2236,7 @@
     const drawerTitle = document.getElementById('drawerTitle');
     const drawerDesc = document.getElementById('drawerDesc');
     const drawerTracksList = document.getElementById('drawerTracksList');
+    const drawerThumbImg = document.getElementById('drawerThumbImg');
     const drawerPlayAllBtn = document.getElementById('drawerPlayAllBtn');
     const drawerCloseBtn = document.getElementById('drawerCloseBtn');
 
@@ -2273,28 +2305,31 @@
 
       clearInterval(fallbackTicker);
 
+      // Update player art with playlist cover
+      if (playerArt && playlist && playlist.artwork) {
+        playerArt.innerHTML = `<img src="${playlist.artwork}" alt="${playlist.title}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />`;
+      }
+
       // Clean local audio source
       if (song.file) {
         audio.src = song.file;
         audio.load();
         if (autoPlay) {
-          audio.play().then(() => {
-            setPlayingState(true);
-          }).catch(() => {
-            setPlayingState(true);
-            startFallbackTicker(song.duration);
-          });
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              setPlayingState(true);
+            }).catch(err => {
+              console.warn('Playback waiting for user gesture or loading:', err);
+              setPlayingState(false);
+            });
+          }
         } else {
           setPlayingState(false);
         }
       } else {
         audio.src = '';
-        if (autoPlay) {
-          setPlayingState(true);
-          startFallbackTicker(song.duration);
-        } else {
-          setPlayingState(false);
-        }
+        setPlayingState(false);
       }
 
       updateDrawerActiveSong();
@@ -2335,6 +2370,10 @@
     audio.addEventListener('play', () => setPlayingState(true));
     audio.addEventListener('pause', () => setPlayingState(false));
     audio.addEventListener('ended', handleSongEnd);
+    audio.addEventListener('error', () => {
+      console.warn('Audio stream error on:', audio.src, audio.error);
+      setPlayingState(false);
+    });
 
     function playAudio() {
       if (audio.src) {
@@ -2494,6 +2533,9 @@
       drawerBadge.textContent = playlist.platformBadge;
       drawerTitle.textContent = playlist.title + ' (' + playlist.bengaliTitle + ')';
       drawerDesc.textContent = playlist.description;
+      if (drawerThumbImg && playlist.artwork) {
+        drawerThumbImg.src = playlist.artwork;
+      }
 
       // Render Tracks Table
       drawerTracksList.innerHTML = playlist.songs.map((song, idx) => {

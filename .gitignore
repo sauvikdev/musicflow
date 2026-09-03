@@ -1,0 +1,5 @@
+node_modules/
+yt-dlp.exe
+music-flow(*
+*.log
+.DS_Store
